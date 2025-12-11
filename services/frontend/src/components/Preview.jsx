@@ -12,9 +12,9 @@ function Preview({ markdown, syntaxHighlighting, isLoading: externalLoading, onL
   const [numPages, setNumPages] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [scale, setScale] = useState(1.5);
   const containerRef = useRef(null);
   const scrollPositionRef = useRef(0);
-  const [pageNumber, setPageNumber] = useState(1);
 
   useEffect(() => {
     if (!markdown.trim()) {
@@ -49,6 +49,21 @@ function Preview({ markdown, syntaxHighlighting, isLoading: externalLoading, onL
 
     return () => clearTimeout(timeoutId);
   }, [markdown, syntaxHighlighting, onLoaded]);
+
+  useEffect(() => {
+    const updateScale = () => {
+      if (containerRef.current) {
+        const containerWidth = containerRef.current.clientWidth - 40;
+        const pdfWidth = 595;
+        const newScale = Math.min(containerWidth / pdfWidth, 1.5);
+        setScale(newScale);
+      }
+    };
+
+    updateScale();
+    window.addEventListener('resize', updateScale);
+    return () => window.removeEventListener('resize', updateScale);
+  }, [pdfData]);
 
   const onDocumentLoadSuccess = ({ numPages }) => {
     setNumPages(numPages);
@@ -99,7 +114,7 @@ function Preview({ markdown, syntaxHighlighting, isLoading: externalLoading, onL
               file={pdfUrl}
               onLoadSuccess={onDocumentLoadSuccess}
               onLoadError={onDocumentLoadError}
-              loading={<div className="loading"><div className="spinner"></div><p>Loading PDF...</p></div>}
+              loading={null}
             >
               {Array.from(new Array(numPages), (el, index) => (
                 <Page
@@ -107,7 +122,7 @@ function Preview({ markdown, syntaxHighlighting, isLoading: externalLoading, onL
                   pageNumber={index + 1}
                   renderTextLayer={true}
                   renderAnnotationLayer={true}
-                  scale={1.5}
+                  scale={scale}
                   className="pdf-page"
                 />
               ))}
