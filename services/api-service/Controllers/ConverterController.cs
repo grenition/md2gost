@@ -29,7 +29,8 @@ public class ConverterController : ControllerBase
 
             var docxBytes = await _converterService.ConvertToDocxAsync(
                 request.Markdown,
-                request.SyntaxHighlighting ?? true
+                request.SyntaxHighlighting ?? true,
+                request.SessionId
             );
 
             return File(docxBytes, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "document.docx");
@@ -53,7 +54,8 @@ public class ConverterController : ControllerBase
 
             var pdf = await _converterService.ConvertToPreviewAsync(
                 request.Markdown,
-                request.SyntaxHighlighting ?? true
+                request.SyntaxHighlighting ?? true,
+                request.SessionId
             );
 
             return Ok(new { pdf });
@@ -76,11 +78,13 @@ public class ConvertRequest
 {
     public string Markdown { get; set; } = string.Empty;
     public bool? SyntaxHighlighting { get; set; }
+    public string? SessionId { get; set; }
 }
 
 public class PreviewRequest
 {
     public string Markdown { get; set; } = string.Empty;
     public bool? SyntaxHighlighting { get; set; }
+    public string? SessionId { get; set; }
 }
 

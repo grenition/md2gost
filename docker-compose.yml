@@ -48,12 +48,30 @@ services:
     volumes:
       - ./md2gost:/app/md2gost:ro
       - ./setup.py:/app/setup.py:ro
+      - sessions-data:/tmp/md2gost/sessions
     environment:
       - TEMPLATE_PATH=/app/md2gost/Template.docx
       - WORKING_DIR=/tmp/md2gost
     networks:
       - md2gost-network
 
+  file-service:
+    build:
+      context: ./services/file-service
+      dockerfile: Dockerfile
+    container_name: md2gost-file-service
+    expose:
+      - "5002"
+    volumes:
+      - sessions-data:/tmp/md2gost/sessions
+    environment:
+      - STORAGE_BASE=/tmp/md2gost/sessions
+    networks:
+      - md2gost-network
+
 networks:
   md2gost-network:
     driver: bridge
+
+volumes:
+  sessions-data:

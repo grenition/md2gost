@@ -91,6 +91,7 @@ def convert():
         data = request.get_json()
         markdown_content = data.get('markdown', '')
         syntax_highlighting = data.get('syntax_highlighting', True)
+        session_id = data.get('session_id')
         
         if not markdown_content:
             return jsonify({'error': 'Markdown content is required'}), 400
@@ -109,6 +110,16 @@ def convert():
                 os.environ['SYNTAX_HIGHLIGHTING'] = '1'
             else:
                 os.environ.pop('SYNTAX_HIGHLIGHTING', None)
+            
+            if session_id:
+                session_images_dir = os.path.join('/tmp/md2gost/sessions', session_id, 'images')
+                if os.path.exists(session_images_dir):
+                    for filename in os.listdir(session_images_dir):
+                        src_path = os.path.join(session_images_dir, filename)
+                        dst_path = os.path.join(working_dir, filename)
+                        if os.path.isfile(src_path):
+                            import shutil
+                            shutil.copy2(src_path, dst_path)
             
             converter = Converter(md_file_path, docx_file_path, TEMPLATE_PATH, debug=False)
             converter.convert()
@@ -153,6 +164,7 @@ def preview():
         data = request.get_json()
         markdown_content = data.get('markdown', '')
         syntax_highlighting = data.get('syntax_highlighting', True)
+        session_id = data.get('session_id')
         
         if not markdown_content:
             return jsonify({'error': 'Markdown content is required'}), 400
@@ -171,6 +183,16 @@ def preview():
                 os.environ['SYNTAX_HIGHLIGHTING'] = '1'
             else:
                 os.environ.pop('SYNTAX_HIGHLIGHTING', None)
+            
+            if session_id:
+                session_images_dir = os.path.join('/tmp/md2gost/sessions', session_id, 'images')
+                if os.path.exists(session_images_dir):
+                    for filename in os.listdir(session_images_dir):
+                        src_path = os.path.join(session_images_dir, filename)
+                        dst_path = os.path.join(working_dir, filename)
+                        if os.path.isfile(src_path):
+                            import shutil
+                            shutil.copy2(src_path, dst_path)
             
             converter = Converter(md_file_path, docx_file_path, TEMPLATE_PATH, debug=False)
             converter.convert()

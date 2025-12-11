@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Editor from './components/Editor';
 import Preview from './components/Preview';
 import Header from './components/Header';
+import { getSessionId } from './services/api';
 import './App.css';
 
 const exampleContent = `# *TABLE OF CONTENTS
@@ -67,6 +68,7 @@ function App() {
   const [markdown, setMarkdown] = useState(exampleContent);
   const [syntaxHighlighting, setSyntaxHighlighting] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [sessionId] = useState(() => getSessionId());
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -94,6 +96,7 @@ function App() {
           value={markdown}
           onChange={setMarkdown}
           syntaxHighlighting={syntaxHighlighting}
+          sessionId={sessionId}
         />
         <Preview
           markdown={markdown}

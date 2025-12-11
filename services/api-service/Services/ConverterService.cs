@@ -14,12 +14,13 @@ public class ConverterService
         _logger = logger;
     }
 
-    public async Task<byte[]> ConvertToDocxAsync(string markdown, bool syntaxHighlighting)
+    public async Task<byte[]> ConvertToDocxAsync(string markdown, bool syntaxHighlighting, string? sessionId = null)
     {
         var request = new
         {
             markdown = markdown,
-            syntax_highlighting = syntaxHighlighting
+            syntax_highlighting = syntaxHighlighting,
+            session_id = sessionId
         };
 
         var json = JsonSerializer.Serialize(request);
@@ -33,12 +34,13 @@ public class ConverterService
         return await response.Content.ReadAsByteArrayAsync();
     }
 
-    public async Task<string> ConvertToPreviewAsync(string markdown, bool syntaxHighlighting)
+    public async Task<string> ConvertToPreviewAsync(string markdown, bool syntaxHighlighting, string? sessionId = null)
     {
         var request = new
         {
             markdown = markdown,
-            syntax_highlighting = syntaxHighlighting
+            syntax_highlighting = syntaxHighlighting,
+            session_id = sessionId
         };
 
         var json = JsonSerializer.Serialize(request);
