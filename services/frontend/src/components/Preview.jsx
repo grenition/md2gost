@@ -1,21 +1,35 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { getPreview } from '../services/api';
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
+import 'react-pdf/dist/esm/Page/TextLayer.css';
 import './Preview.css';
+
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 function Preview({ markdown, syntaxHighlighting, isLoading: externalLoading, onLoaded }) {
   const [pdfData, setPdfData] = useState(null);
+  const [numPages, setNumPages] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const containerRef = useRef(null);
+  const scrollPositionRef = useRef(0);
+  const [pageNumber, setPageNumber] = useState(1);
 
   useEffect(() => {
     if (!markdown.trim()) {
       setPdfData(null);
+      setNumPages(null);
       setError(null);
       return;
     }
 
     let timeoutId;
     const fetchPreview = async () => {
+      if (containerRef.current) {
+        scrollPositionRef.current = containerRef.current.scrollTop;
+      }
+
       setIsLoading(true);
       setError(null);
       
@@ -36,8 +50,26 @@ function Preview({ markdown, syntaxHighlighting, isLoading: externalLoading, onL
     return () => clearTimeout(timeoutId);
   }, [markdown, syntaxHighlighting, onLoaded]);
 
-  const showLoading = isLoading || externalLoading;
-  const pdfUrl = pdfData ? `data:application/pdf;base64,${pdfData}#toolbar=0&navpanes=0&scrollbar=0&view=FitH` : null;
+  const onDocumentLoadSuccess = ({ numPages }) => {
+    setNumPages(numPages);
+    
+    const savedScroll = scrollPositionRef.current;
+    if (containerRef.current && savedScroll > 0) {
+      setTimeout(() => {
+        if (containerRef.current) {
+          containerRef.current.scrollTop = savedScroll;
+        }
+      }, 100);
+    }
+  };
+
+  const onDocumentLoadError = (error) => {
+    setError(`Failed to load PDF: ${error.message}`);
+  };
+
+  const showLoading = (isLoading || externalLoading) && !pdfData;
+
+  const pdfUrl = pdfData ? `data:application/pdf;base64,${pdfData}` : null;
 
   return (
     <div className="preview-panel">
@@ -59,11 +91,28 @@ function Preview({ markdown, syntaxHighlighting, isLoading: externalLoading, onL
             <p>Start typing to see DOCX preview...</p>
           </div>
         ) : (
-          <iframe
-            src={pdfUrl}
-            className="preview-iframe"
-            title="DOCX Preview"
-          />
+          <div 
+            ref={containerRef}
+            className="pdf-container"
+          >
+            <Document
+              file={pdfUrl}
+              onLoadSuccess={onDocumentLoadSuccess}
+              onLoadError={onDocumentLoadError}
+              loading={<div className="loading"><div className="spinner"></div><p>Loading PDF...</p></div>}
+            >
+              {Array.from(new Array(numPages), (el, index) => (
+                <Page
+                  key={`page_${index + 1}`}
+                  pageNumber={index + 1}
+                  renderTextLayer={true}
+                  renderAnnotationLayer={true}
+                  scale={1.5}
+                  className="pdf-page"
+                />
+              ))}
+            </Document>
+          </div>
         )}
       </div>
     </div>
