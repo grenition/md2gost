@@ -21,7 +21,7 @@ from .find_font import find_font
 
 
 def _merge_objects(*objects):
-    from inspect import getmembers, ismethod
+    from inspect import ismethod
     """
     Returns the new object containing attributes from objects, where the latest
     one has the highest priority.
@@ -31,17 +31,31 @@ def _merge_objects(*objects):
         pass
 
     merged_object = MergedObject()
-    for name, value in getmembers(objects[0]):
-        if name.startswith("_") or ismethod(value):
+    
+    # Use dir() instead of getmembers() to avoid accessing problematic properties
+    for name in dir(objects[0]):
+        if name.startswith("_"):
             continue
-        merged_object.__setattr__(name, value)
+        try:
+            value = getattr(objects[0], name)
+            if ismethod(value):
+                continue
+            merged_object.__setattr__(name, value)
+        except (ValueError, AttributeError):
+            continue
 
     for object_ in objects[1:]:
-        for name, value in getmembers(object_):
-            if name.startswith("_") or ismethod(value):
+        for name in dir(object_):
+            if name.startswith("_"):
                 continue
-            if value is not None:
-                merged_object.__setattr__(name, value)
+            try:
+                value = getattr(object_, name)
+                if ismethod(value):
+                    continue
+                if value is not None:
+                    merged_object.__setattr__(name, value)
+            except (ValueError, AttributeError):
+                continue
 
     return merged_object
 

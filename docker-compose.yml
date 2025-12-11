@@ -1,0 +1,59 @@
+services:
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    container_name: md2gost-gateway
+    ports:
+      - "80:80"
+    depends_on:
+      - frontend
+      - api-service
+    networks:
+      - md2gost-network
+
+  frontend:
+    build:
+      context: ./services/frontend
+      dockerfile: Dockerfile
+    container_name: md2gost-frontend
+    expose:
+      - "3000"
+    depends_on:
+      - api-service
+    networks:
+      - md2gost-network
+
+  api-service:
+    build:
+      context: ./services/api-service
+      dockerfile: Dockerfile
+    container_name: md2gost-api-service
+    expose:
+      - "5001"
+    depends_on:
+      - docx-service
+    environment:
+      - DocxService__Url=http://docx-service:5000
+    networks:
+      - md2gost-network
+
+  docx-service:
+    build:
+      context: .
+      dockerfile: ./services/docx-service/Dockerfile
+    container_name: md2gost-docx-service
+    expose:
+      - "5000"
+    volumes:
+      - ./md2gost:/app/md2gost:ro
+      - ./setup.py:/app/setup.py:ro
+    environment:
+      - TEMPLATE_PATH=/app/md2gost/Template.docx
+      - WORKING_DIR=/tmp/md2gost
+    networks:
+      - md2gost-network
+
+networks:
+  md2gost-network:
+    driver: bridge

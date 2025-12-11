@@ -5,6 +5,16 @@ from functools import cache
 
 
 def __find_font_linux(name: str, bold: bool, italic: bool):
+    font_fallback_map = {
+        "Times New Roman": ["Liberation Serif", "DejaVu Serif", "Times"],
+        "Courier New": ["Liberation Mono", "DejaVu Sans Mono", "Courier"],
+        "Arial": ["Liberation Sans", "DejaVu Sans", "Helvetica"],
+    }
+    
+    search_names = [name]
+    if name in font_fallback_map:
+        search_names.extend(font_fallback_map[name])
+    
     result = subprocess.run(
         "fc-list", shell=True, check=True, stdout=subprocess.PIPE,
         stderr=subprocess.PIPE, text=True)
@@ -17,11 +27,18 @@ def __find_font_linux(name: str, bold: bool, italic: bool):
         logging.log(logging.ERROR, "fc-list not found")
         exit(1)
 
-    for path, names, styles in fonts:
-        if (name in names
-                and ("Bold" in styles) == bool(bold)
-                and ("Italic" in styles) == bool(italic)):
-            return path
+    for search_name in search_names:
+        for path, names, styles in fonts:
+            if (search_name in names
+                    and ("Bold" in styles) == bool(bold)
+                    and ("Italic" in styles) == bool(italic)):
+                return path
+    
+    for search_name in search_names:
+        for path, names, styles in fonts:
+            if search_name in names:
+                return path
+    
     raise ValueError(f"Font {name} not found")
 
 

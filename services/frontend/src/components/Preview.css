@@ -1,0 +1,179 @@
+.preview-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-secondary);
+  min-width: 0;
+}
+
+.panel-header {
+  padding: 12px 20px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color);
+  font-weight: 500;
+  color: var(--text-primary);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.panel-content {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  background: var(--bg-primary);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-content {
+  flex: 1;
+  overflow: auto;
+  padding: 30px;
+  color: var(--text-primary);
+  min-height: 0;
+  font-family: 'Times New Roman', 'Liberation Serif', serif;
+  font-size: 14pt;
+  line-height: 1.5;
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-secondary);
+  font-size: 14px;
+  flex: 1;
+  min-height: 0;
+}
+
+.spinner {
+  border: 3px solid var(--border-color);
+  border-top: 3px solid var(--accent-color);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.empty-state,
+.error-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-secondary);
+  font-family: 'Times New Roman', 'Liberation Serif', serif;
+  font-size: 14pt;
+  line-height: 1.5;
+  padding: 40px;
+  text-align: center;
+  flex: 1;
+  min-height: 0;
+}
+
+.error-state {
+  color: var(--error-color);
+}
+
+.preview-content :global(*) {
+  box-sizing: border-box;
+}
+
+.preview-content :global(html),
+.preview-content :global(body) {
+  background: transparent !important;
+  color: var(--text-primary) !important;
+  font-family: 'Times New Roman', 'Liberation Serif', serif !important;
+  font-size: 14pt !important;
+  line-height: 1.5 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.preview-content :global(h1) {
+  font-size: 16pt !important;
+  font-weight: bold !important;
+  color: var(--text-primary) !important;
+  margin-top: 1.5em !important;
+  margin-bottom: 0.5em !important;
+  line-height: 1.2 !important;
+}
+
+.preview-content :global(h2) {
+  font-size: 15pt !important;
+  font-weight: bold !important;
+  color: var(--text-primary) !important;
+  margin-top: 1.5em !important;
+  margin-bottom: 0.5em !important;
+  line-height: 1.2 !important;
+}
+
+.preview-content :global(h3),
+.preview-content :global(h4),
+.preview-content :global(h5),
+.preview-content :global(h6) {
+  font-size: 14pt !important;
+  font-weight: bold !important;
+  color: var(--text-primary) !important;
+  margin-top: 1.5em !important;
+  margin-bottom: 0.5em !important;
+  line-height: 1.2 !important;
+}
+
+.preview-content :global(p) {
+  font-size: 14pt !important;
+  line-height: 1.5 !important;
+  color: var(--text-primary) !important;
+  margin: 0.8em 0 !important;
+  text-indent: 1.25cm !important;
+  text-align: justify !important;
+}
+
+.preview-content :global(p.no-indent),
+.preview-content :global(p.caption) {
+  text-indent: 0 !important;
+}
+
+.preview-content :global(table) {
+  border-collapse: collapse !important;
+  width: 100% !important;
+  margin: 1em 0 !important;
+  border-color: var(--border-color) !important;
+}
+
+.preview-content :global(table td),
+.preview-content :global(table th) {
+  border: 1px solid var(--border-color) !important;
+  padding: 4pt !important;
+  color: var(--text-primary) !important;
+  font-size: 14pt !important;
+  line-height: 1.5 !important;
+}
+
+.preview-content :global(img) {
+  max-width: 100% !important;
+  height: auto !important;
+  display: block !important;
+  margin: 1em auto !important;
+}
+
+.preview-content :global(code) {
+  font-family: 'Courier New', 'Liberation Mono', monospace !important;
+  font-size: 12pt !important;
+}
+
+.preview-content :global(.center) {
+  text-align: center !important;
+}

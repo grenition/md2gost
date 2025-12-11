@@ -1,0 +1,74 @@
+.editor-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  min-width: 0;
+}
+
+.panel-header {
+  padding: 12px 20px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color);
+  font-weight: 500;
+  color: var(--text-primary);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.panel-content {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  background: var(--bg-primary);
+  min-height: 0;
+  height: 100%;
+}
+
+.panel-content > div {
+  height: 100% !important;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-content .cm-editor {
+  height: 100% !important;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.panel-content .cm-scroller {
+  overflow: auto !important;
+  flex: 1;
+  min-height: 0;
+}
+
+.panel-content .cm-content {
+  min-height: auto !important;
+}
+
+.panel-content .cm-focused {
+  outline: none;
+}
+
+.panel-content .cm-selectionBackground {
+  background-color: #b3d4fc !important;
+}
+
+.panel-content .cm-editor.cm-focused .cm-selectionBackground {
+  background-color: #b3d4fc !important;
+}
+
+@media (max-width: 768px) {
+  .editor-panel {
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+  }
+}
