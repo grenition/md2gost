@@ -30,8 +30,8 @@ def __find_font_linux(name: str, bold: bool, italic: bool):
     for search_name in search_names:
         for path, names, styles in fonts:
             if (search_name in names
-                    and ("Bold" in styles) == bool(bold)
-                    and ("Italic" in styles) == bool(italic)):
+                and ("Bold" in styles) == bool(bold)
+                and ("Italic" in styles) == bool(italic)):
                 return path
     
     for search_name in search_names:

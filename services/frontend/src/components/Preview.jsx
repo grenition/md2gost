@@ -3,13 +3,13 @@ import { getPreview } from '../services/api';
 import './Preview.css';
 
 function Preview({ markdown, syntaxHighlighting, isLoading: externalLoading, onLoaded }) {
-  const [html, setHtml] = useState('');
+  const [pdfData, setPdfData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     if (!markdown.trim()) {
-      setHtml('<div class="empty-state">Start typing to see DOCX preview...</div>');
+      setPdfData(null);
       setError(null);
       return;
     }
@@ -20,8 +20,8 @@ function Preview({ markdown, syntaxHighlighting, isLoading: externalLoading, onL
       setError(null);
       
       try {
-        const previewHtml = await getPreview(markdown, syntaxHighlighting);
-        setHtml(previewHtml);
+        const pdfBase64 = await getPreview(markdown, syntaxHighlighting);
+        setPdfData(pdfBase64);
         onLoaded();
       } catch (err) {
         setError(err.message);
@@ -37,6 +37,7 @@ function Preview({ markdown, syntaxHighlighting, isLoading: externalLoading, onL
   }, [markdown, syntaxHighlighting, onLoaded]);
 
   const showLoading = isLoading || externalLoading;
+  const pdfUrl = pdfData ? `data:application/pdf;base64,${pdfData}#toolbar=0&navpanes=0&scrollbar=0&view=FitH` : null;
 
   return (
     <div className="preview-panel">
@@ -53,10 +54,15 @@ function Preview({ markdown, syntaxHighlighting, isLoading: externalLoading, onL
           <div className="error-state">
             <p>Error generating preview: {error}</p>
           </div>
+        ) : !pdfUrl ? (
+          <div className="empty-state">
+            <p>Start typing to see DOCX preview...</p>
+          </div>
         ) : (
-          <div
-            className="preview-content"
-            dangerouslySetInnerHTML={{ __html: html }}
+          <iframe
+            src={pdfUrl}
+            className="preview-iframe"
+            title="DOCX Preview"
           />
         )}
       </div>

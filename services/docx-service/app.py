@@ -20,36 +20,64 @@ if not os.path.exists(TEMPLATE_PATH):
     TEMPLATE_PATH = os.path.join('/app', 'md2gost', 'Template.docx')
 
 
-def docx_to_html(docx_path):
-    import mammoth
+def docx_to_pdf(docx_path):
+    import subprocess
+    import base64
     
-    with open(docx_path, "rb") as docx_file:
-        result = mammoth.convert_to_html(docx_file)
-        html_content = result.value
+    pdf_path = docx_path.replace('.docx', '.pdf')
+    
+    env = os.environ.copy()
+    env['HOME'] = '/tmp'
+    env['SAL_USE_VCLPLUGIN'] = 'headless'
+    env['USER'] = 'root'
+    
+    try:
+        result = subprocess.run(
+            [
+                'libreoffice',
+                '--headless',
+                '--nodefault',
+                '--nolockcheck',
+                '--nologo',
+                '--norestore',
+                '--convert-to', 'pdf',
+                '--outdir', os.path.dirname(docx_path),
+                docx_path
+            ],
+            env=env,
+            check=True,
+            timeout=60,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=os.path.dirname(docx_path)
+        )
         
-    css_style = '''<style>
-        body { 
-            font-family: 'Times New Roman', 'Liberation Serif', serif; 
-            font-size: 14pt; 
-            line-height: 1.5; 
-            margin: 2cm 3cm 2cm 1.5cm;
-            text-align: justify;
-        }
-        h1, h2, h3, h4, h5, h6 { 
-            font-weight: bold; 
-            margin-top: 1em; 
-            margin-bottom: 0.5em;
-        }
-        h1 { font-size: 16pt; }
-        h2 { font-size: 15pt; }
-        h3 { font-size: 14pt; }
-        p { margin: 0.5em 0; text-indent: 1.25cm; }
-        table { border-collapse: collapse; width: 100%; margin: 1em 0; }
-        table td, table th { border: 1px solid black; padding: 4pt; }
-        img { max-width: 100%; height: auto; display: block; margin: 1em auto; }
-    </style>'''
-    
-    return f'<html><head><meta charset="UTF-8">{css_style}</head><body>{html_content}</body></html>'
+        if not os.path.exists(pdf_path):
+            stderr_output = result.stderr.decode('utf-8') if result.stderr else 'No stderr'
+            raise Exception(f"PDF file was not created. LibreOffice stderr: {stderr_output}")
+        
+        with open(pdf_path, 'rb') as pdf_file:
+            pdf_data = pdf_file.read()
+        
+        if len(pdf_data) == 0:
+            raise Exception("Generated PDF file is empty")
+        
+        pdf_base64 = base64.b64encode(pdf_data).decode('utf-8')
+        
+        try:
+            os.unlink(pdf_path)
+        except:
+            pass
+        
+        return pdf_base64
+    except subprocess.TimeoutExpired:
+        raise Exception("PDF conversion timeout")
+    except subprocess.CalledProcessError as e:
+        stderr_output = e.stderr.decode('utf-8') if e.stderr else str(e)
+        stdout_output = e.stdout.decode('utf-8') if e.stdout else ''
+        raise Exception(f"PDF conversion failed. Return code: {e.returncode}. Stderr: {stderr_output}. Stdout: {stdout_output}")
+    except Exception as e:
+        raise Exception(f"PDF conversion error: {str(e)}")
 
 
 @app.route('/health', methods=['GET'])
@@ -157,9 +185,9 @@ def preview():
             
             doc.save(docx_file_path)
             
-            html_content = docx_to_html(docx_file_path)
+            pdf_base64 = docx_to_pdf(docx_file_path)
             
-            return jsonify({'html': html_content})
+            return jsonify({'pdf': pdf_base64})
         finally:
             try:
                 os.unlink(md_file_path)
@@ -170,7 +198,10 @@ def preview():
                 
     except Exception as e:
         import traceback
-        return jsonify({'error': str(e), 'traceback': traceback.format_exc()}), 500
+        error_msg = str(e)
+        error_traceback = traceback.format_exc()
+        app.logger.error(f"Preview error: {error_msg}\n{error_traceback}")
+        return jsonify({'error': error_msg, 'traceback': error_traceback}), 500
 
 
 if __name__ == '__main__':

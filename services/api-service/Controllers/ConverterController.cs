@@ -51,12 +51,12 @@ public class ConverterController : ControllerBase
                 return BadRequest(new { error = "Markdown content is required" });
             }
 
-            var html = await _converterService.ConvertToPreviewAsync(
+            var pdf = await _converterService.ConvertToPreviewAsync(
                 request.Markdown,
                 request.SyntaxHighlighting ?? true
             );
 
-            return Ok(new { html });
+            return Ok(new { pdf });
         }
         catch (Exception ex)
         {

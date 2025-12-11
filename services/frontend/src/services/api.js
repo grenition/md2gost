@@ -12,7 +12,7 @@ export const getPreview = async (markdown, syntaxHighlighting = true) => {
     markdown,
     syntaxHighlighting,
   });
-  return response.data.html;
+  return response.data.pdf;
 };
 
 export const downloadDocx = async (markdown, syntaxHighlighting = true) => {

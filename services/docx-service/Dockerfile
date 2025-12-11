@@ -8,6 +8,8 @@ RUN apt-get update && apt-get install -y \
     fontconfig \
     fonts-liberation \
     fonts-dejavu-core \
+    libreoffice \
+    libreoffice-writer \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

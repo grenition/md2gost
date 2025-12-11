@@ -55,12 +55,12 @@ public class ConverterService
             PropertyNameCaseInsensitive = true
         });
 
-        return result?.Html ?? string.Empty;
+        return result?.Pdf ?? string.Empty;
     }
 }
 
 public class PreviewResponse
 {
-    public string Html { get; set; } = string.Empty;
+    public string Pdf { get; set; } = string.Empty;
 }
 
