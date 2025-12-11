@@ -54,6 +54,16 @@
   box-sizing: border-box;
 }
 
+.pdf-container ::selection {
+  background-color: rgba(0, 123, 255, 0.3) !important;
+  color: transparent !important;
+}
+
+.pdf-container ::-moz-selection {
+  background-color: rgba(0, 123, 255, 0.3) !important;
+  color: transparent !important;
+}
+
 .pdf-container :global(.react-pdf__Document) {
   display: flex;
   flex-direction: column;
@@ -113,14 +123,42 @@
   -ms-user-select: text;
 }
 
+.pdf-page :global(.react-pdf__Page__textContent span::selection),
+.pdf-page :global(.react-pdf__Page__textContent span::-moz-selection) {
+  background-color: rgba(0, 123, 255, 0.4) !important;
+  color: transparent !important;
+}
+
+.pdf-page :global(.react-pdf__Page__textContent)::selection,
+.pdf-page :global(.react-pdf__Page__textContent)::-moz-selection {
+  background-color: rgba(0, 123, 255, 0.4) !important;
+}
+
+.pdf-page :global(.react-pdf__Page__textContent span) {
+  color: transparent;
+  position: absolute;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+}
+
+.pdf-page :global(.react-pdf__Page__textContent span:hover) {
+  background-color: rgba(0, 123, 255, 0.1);
+}
+
 .pdf-page :global(.react-pdf__Page__textContent .highlighting) {
   position: absolute;
   left: 0;
   top: 0;
   right: 0;
   bottom: 0;
-  opacity: 0.2;
+  opacity: 0.4;
   pointer-events: none;
+  background-color: rgba(0, 123, 255, 0.4) !important;
 }
 
 .pdf-page :global(.react-pdf__Page__annotations) {

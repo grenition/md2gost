@@ -60,9 +60,35 @@
 
 .panel-content .cm-selectionBackground {
   background-color: #b3d4fc !important;
+  opacity: 1 !important;
 }
 
 .panel-content .cm-editor.cm-focused .cm-selectionBackground {
+  background-color: #b3d4fc !important;
+  opacity: 1 !important;
+}
+
+.panel-content .cm-content ::selection {
+  background-color: #b3d4fc !important;
+}
+
+.panel-content .cm-content ::-moz-selection {
+  background-color: #b3d4fc !important;
+}
+
+.panel-content .cm-scroller ::selection {
+  background-color: #b3d4fc !important;
+}
+
+.panel-content .cm-scroller ::-moz-selection {
+  background-color: #b3d4fc !important;
+}
+
+.editor-panel ::selection {
+  background-color: #b3d4fc !important;
+}
+
+.editor-panel ::-moz-selection {
   background-color: #b3d4fc !important;
 }
 

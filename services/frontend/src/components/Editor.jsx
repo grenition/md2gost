@@ -32,13 +32,22 @@ function Editor({ value, onChange, syntaxHighlighting }) {
         color: 'var(--text-secondary)',
       },
       '.cm-selectionBackground': {
-        backgroundColor: '#b3d4fc',
+        backgroundColor: '#b3d4fc !important',
       },
       '&.cm-focused .cm-selectionBackground': {
-        backgroundColor: '#b3d4fc',
+        backgroundColor: '#b3d4fc !important',
       },
       '.cm-focused .cm-selectionBackground': {
-        backgroundColor: '#b3d4fc',
+        backgroundColor: '#b3d4fc !important',
+      },
+      '.cm-selectionMatch': {
+        backgroundColor: '#b3d4fc !important',
+      },
+      '& ::selection': {
+        backgroundColor: '#b3d4fc !important',
+      },
+      '& ::-moz-selection': {
+        backgroundColor: '#b3d4fc !important',
       },
     }),
   ];
