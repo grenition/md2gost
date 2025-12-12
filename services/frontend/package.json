@@ -16,7 +16,8 @@
     "@codemirror/search": "^6.5.5",
     "@codemirror/autocomplete": "^6.11.0",
     "@uiw/react-codemirror": "^4.23.0",
-    "react-pdf": "^7.6.0"
+    "react-pdf": "^7.6.0",
+    "react-router-dom": "^6.20.0"
   },
   "scripts": {
     "start": "react-scripts start",

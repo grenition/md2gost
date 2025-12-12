@@ -9,6 +9,7 @@ services:
     depends_on:
       - frontend
       - api-service
+      - session-service
     networks:
       - md2gost-network
 
@@ -19,8 +20,6 @@ services:
     container_name: md2gost-frontend
     expose:
       - "3000"
-    depends_on:
-      - api-service
     networks:
       - md2gost-network
 
@@ -33,8 +32,22 @@ services:
       - "5001"
     depends_on:
       - docx-service
+      - file-service
+      - session-service
     environment:
-      - DocxService__Url=http://docx-service:5000
+      - DOCX_SERVICE_URL=http://docx-service:5000
+      - FILE_SERVICE_URL=http://file-service:5002
+      - SESSION_SERVICE_URL=http://session-service:5003
+    networks:
+      - md2gost-network
+
+  session-service:
+    build:
+      context: ./services/session-service
+      dockerfile: Dockerfile
+    container_name: md2gost-session-service
+    expose:
+      - "5003"
     networks:
       - md2gost-network
 

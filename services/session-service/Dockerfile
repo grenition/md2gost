@@ -8,11 +8,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app.py /app/app.py
 
 ENV PYTHONUNBUFFERED=1
-ENV DOCX_SERVICE_URL=http://docx-service:5000
-ENV FILE_SERVICE_URL=http://file-service:5002
-ENV SESSION_SERVICE_URL=http://session-service:5003
 
-EXPOSE 5001
+EXPOSE 5003
 
 CMD ["python", "app.py"]
 

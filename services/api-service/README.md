@@ -1,18 +1,27 @@
-# API Service
+# API Service (Python)
 
-ASP.NET Core orchestration service that coordinates between the frontend and the Python DOCX service.
+Flask service for orchestrating requests to internal services.
 
 ## Description
 
-This service acts as an API gateway/orchestrator:
-- Receives requests from the frontend
-- Proxies requests to the Python DOCX service
-- Handles errors and timeouts
-- Returns appropriate HTTP responses
+This service acts as an orchestration layer that:
+- Validates sessions before processing requests
+- Routes requests to appropriate internal services (docx-service, file-service)
+- Provides a unified API interface for the frontend
+
+## Architecture
+
+- **Internal Services** (not exposed via gateway):
+  - `docx-service`: DOCX conversion
+  - `file-service`: File storage
+  
+- **External Services** (exposed via gateway):
+  - `session-service`: Session management
+  - `api-service`: This service (orchestration)
 
 ## API Endpoints
 
-### GET /api/health
+### GET /health
 
 Health check endpoint.
 
@@ -26,13 +35,14 @@ Health check endpoint.
 
 ### POST /api/convert
 
-Converts Markdown content to DOCX file. Proxies to Python DOCX service.
+Convert Markdown to DOCX.
 
-**Request Body:**
+**Request:**
 ```json
 {
-  "markdown": "# Example\n\nThis is markdown content.",
-  "syntaxHighlighting": true
+  "markdown": "# Hello World",
+  "syntax_highlighting": true,
+  "session_id": "session_20231211_123456_abc123"
 }
 ```
 
@@ -40,56 +50,77 @@ Converts Markdown content to DOCX file. Proxies to Python DOCX service.
 - Content-Type: `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
 - Binary DOCX file
 
-**Error Response:**
-```json
-{
-  "error": "Error message"
-}
-```
-
 ### POST /api/preview
 
-Converts Markdown content to HTML preview. Proxies to Python DOCX service.
+Generate PDF preview of Markdown.
 
-**Request Body:**
+**Request:**
 ```json
 {
-  "markdown": "# Example\n\nThis is markdown content.",
-  "syntaxHighlighting": true
+  "markdown": "# Hello World",
+  "syntax_highlighting": true,
+  "session_id": "session_20231211_123456_abc123"
 }
 ```
 
 **Response:**
 ```json
 {
-  "html": "<html>...</html>"
+  "pdf": "base64_encoded_pdf_data"
 }
 ```
 
-**Error Response:**
+### POST /api/images/upload
+
+Upload an image file.
+
+**Headers:**
+- `X-Session-Id`: Session identifier (required)
+
+**Request:**
+- Content-Type: `multipart/form-data`
+- Body: `file` (image file)
+
+**Response:**
 ```json
 {
-  "error": "Error message"
+  "filename": "a1b2c3d4.png",
+  "url": "/api/images/{session_id}/a1b2c3d4.png"
+}
+```
+
+### GET /api/images/{session_id}/{filename}
+
+Retrieve an image file.
+
+**Response:**
+- Content-Type: `image/*`
+- Binary image data
+
+### POST /api/session/create
+
+Create a new session (proxies to session-service).
+
+**Response:**
+```json
+{
+  "session_id": "session_20231211_123456_abc123"
 }
 ```
 
 ## Configuration
 
-The service is configured via `appsettings.json`:
+The service is configured via environment variables:
 
-```json
-{
-  "DocxService": {
-    "Url": "http://docx-service:5000"
-  }
-}
-```
+- `DOCX_SERVICE_URL`: URL of the docx-service (default: `http://docx-service:5000`)
+- `FILE_SERVICE_URL`: URL of the file-service (default: `http://file-service:5002`)
+- `SESSION_SERVICE_URL`: URL of the session-service (default: `http://session-service:5003`)
 
 ## Running Locally
 
 ```bash
-dotnet restore
-dotnet run
+pip install -r requirements.txt
+python app.py
 ```
 
 ## Building Docker Image

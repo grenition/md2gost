@@ -93,6 +93,8 @@ def convert():
         syntax_highlighting = data.get('syntax_highlighting', True)
         session_id = data.get('session_id')
         
+        app.logger.warning(f"Convert request received: session_id={session_id}, markdown_length={len(markdown_content)}, data_keys={list(data.keys()) if data else []}")
+        
         if not markdown_content:
             return jsonify({'error': 'Markdown content is required'}), 400
         
@@ -111,15 +113,25 @@ def convert():
             else:
                 os.environ.pop('SYNTAX_HIGHLIGHTING', None)
             
+            # Copy images from session to working directory BEFORE conversion
             if session_id:
                 session_images_dir = os.path.join('/tmp/md2gost/sessions', session_id, 'images')
+                app.logger.info(f"Looking for images in session: {session_id}, dir: {session_images_dir}, working_dir: {working_dir}")
                 if os.path.exists(session_images_dir):
+                    import shutil
+                    copied_count = 0
                     for filename in os.listdir(session_images_dir):
                         src_path = os.path.join(session_images_dir, filename)
                         dst_path = os.path.join(working_dir, filename)
                         if os.path.isfile(src_path):
-                            import shutil
                             shutil.copy2(src_path, dst_path)
+                            copied_count += 1
+                            app.logger.info(f"Copied image: {filename} from {src_path} to {dst_path}")
+                    app.logger.info(f"Copied {copied_count} images to working directory: {working_dir}")
+                else:
+                    app.logger.warning(f"Session images directory not found: {session_images_dir}")
+            else:
+                app.logger.warning("No session_id provided, images will not be copied")
             
             converter = Converter(md_file_path, docx_file_path, TEMPLATE_PATH, debug=False)
             converter.convert()
@@ -166,6 +178,8 @@ def preview():
         syntax_highlighting = data.get('syntax_highlighting', True)
         session_id = data.get('session_id')
         
+        app.logger.warning(f"Preview request received: session_id={session_id}, markdown_length={len(markdown_content)}, data_keys={list(data.keys()) if data else []}")
+        
         if not markdown_content:
             return jsonify({'error': 'Markdown content is required'}), 400
         
@@ -184,15 +198,25 @@ def preview():
             else:
                 os.environ.pop('SYNTAX_HIGHLIGHTING', None)
             
+            # Copy images from session to working directory BEFORE conversion
             if session_id:
                 session_images_dir = os.path.join('/tmp/md2gost/sessions', session_id, 'images')
+                app.logger.info(f"Looking for images in session: {session_id}, dir: {session_images_dir}, working_dir: {working_dir}")
                 if os.path.exists(session_images_dir):
+                    import shutil
+                    copied_count = 0
                     for filename in os.listdir(session_images_dir):
                         src_path = os.path.join(session_images_dir, filename)
                         dst_path = os.path.join(working_dir, filename)
                         if os.path.isfile(src_path):
-                            import shutil
                             shutil.copy2(src_path, dst_path)
+                            copied_count += 1
+                            app.logger.info(f"Copied image: {filename} from {src_path} to {dst_path}")
+                    app.logger.info(f"Copied {copied_count} images to working directory: {working_dir}")
+                else:
+                    app.logger.warning(f"Session images directory not found: {session_images_dir}")
+            else:
+                app.logger.warning("No session_id provided, images will not be copied")
             
             converter = Converter(md_file_path, docx_file_path, TEMPLATE_PATH, debug=False)
             converter.convert()
