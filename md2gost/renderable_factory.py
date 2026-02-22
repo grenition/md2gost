@@ -15,6 +15,7 @@ from .renderable.equation import Equation
 from .renderable.heading import Heading
 from .renderable.list import List
 from .renderable.toc import ToC
+from .renderable.page_break import PageBreak
 
 
 class RenderableFactory:
@@ -95,6 +96,10 @@ class RenderableFactory:
     @create.register
     def _(self, marko_heading: extended_markdown.Heading, caption_info: CaptionInfo):
         heading = Heading(self._parent, marko_heading.level, marko_heading.numbered)
+        # Для нумерованных заголовков добавляем ведущий пробел, чтобы при двузначной/трёхзначной
+        # нумерации (1.2.10, 1.2.100) между номером и текстом всегда был отступ.
+        if marko_heading.numbered:
+            heading.add_run(" ")
         RenderableFactory._create_runs(heading, marko_heading.children)
         return heading
 
@@ -146,3 +151,7 @@ class RenderableFactory:
     def _(self, marko_toc: extended_markdown.TOC, caption_info: CaptionInfo):
         toc = ToC(self._parent)
         return toc
+
+    @create.register
+    def _(self, marko_thematic_break: extended_markdown.ThematicBreak, caption_info: CaptionInfo):
+        return PageBreak(self._parent)
