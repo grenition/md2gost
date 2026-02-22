@@ -77,7 +77,9 @@ class Table(Renderable, RequiresNumbering):
 
             row_height += Pt(0.5)  # bottom row border
 
-            if row_height > layout_state.remaining_page_height:
+            # Break before this row if table + row would not fit on current page.
+            # Only break when we already have at least one row (avoid empty table on page).
+            if (table_height + row_height) > layout_state.remaining_page_height and table_height > Pt(0.5):
                 table_rendered_info = RenderedInfo(docx_table, table_height)
                 yield table_rendered_info
 
