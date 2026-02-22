@@ -168,6 +168,6 @@ class Paragraph(Renderable):
                 layout_state.add_height(rendered_image_height)
             else:
                 yield SubRenderable(image, True)
+                for remaining in images:
+                    yield SubRenderable(remaining, True)
                 break
-
-        yield from images
