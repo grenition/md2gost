@@ -11,5 +11,5 @@ ENV PYTHONUNBUFFERED=1
 
 EXPOSE 5003
 
-CMD ["python", "app.py"]
+CMD ["gunicorn", "--workers", "2", "--threads", "4", "--bind", "0.0.0.0:5003", "--timeout", "120", "app:app"]
 

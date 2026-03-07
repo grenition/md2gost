@@ -14,5 +14,5 @@ ENV SESSION_SERVICE_URL=http://session-service:5003
 
 EXPOSE 5001
 
-CMD ["python", "app.py"]
+CMD ["gunicorn", "--workers", "2", "--threads", "4", "--bind", "0.0.0.0:5001", "--timeout", "300", "app:app"]
 

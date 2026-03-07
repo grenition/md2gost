@@ -32,5 +32,5 @@ ENV TEMPLATE_PATH=/app/md2gost/Template.docx
 
 EXPOSE 5000
 
-CMD ["python", "app.py"]
+CMD ["gunicorn", "--workers", "2", "--threads", "4", "--bind", "0.0.0.0:5000", "--timeout", "300", "app:app"]
 

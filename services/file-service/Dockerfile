@@ -14,5 +14,5 @@ ENV STORAGE_BASE=/tmp/md2gost/sessions
 
 EXPOSE 5002
 
-CMD ["python", "app.py"]
+CMD ["gunicorn", "--workers", "2", "--threads", "4", "--bind", "0.0.0.0:5002", "--timeout", "120", "app:app"]
 
