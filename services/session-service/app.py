@@ -1,5 +1,6 @@
 import os
 import uuid
+import time
 from datetime import datetime
 
 import psycopg2
@@ -14,6 +15,9 @@ DATABASE_URL = os.getenv(
     'DATABASE_URL',
     'postgresql://md2gost:md2gost@postgres:5432/md2gost'
 )
+DB_INIT_MAX_RETRIES = int(os.getenv('DB_INIT_MAX_RETRIES', '20'))
+DB_INIT_RETRY_DELAY_SEC = float(os.getenv('DB_INIT_RETRY_DELAY_SEC', '1'))
+DB_INITIALIZED = False
 
 
 def get_connection():
@@ -21,6 +25,7 @@ def get_connection():
 
 
 def init_db():
+    global DB_INITIALIZED
     with get_connection() as conn:
         with conn.cursor() as cursor:
             cursor.execute(
@@ -37,6 +42,22 @@ def init_db():
             cursor.execute(
                 "CREATE INDEX IF NOT EXISTS idx_sessions_short_id ON sessions(short_id)"
             )
+    DB_INITIALIZED = True
+
+
+def ensure_db_initialized():
+    if DB_INITIALIZED:
+        return
+
+    last_error = None
+    for _ in range(DB_INIT_MAX_RETRIES):
+        try:
+            init_db()
+            return
+        except Exception as exc:
+            last_error = exc
+            time.sleep(DB_INIT_RETRY_DELAY_SEC)
+    raise last_error
 
 
 def short_exists(short_id):
@@ -136,6 +157,7 @@ def generate_short_id():
 @app.route('/health', methods=['GET'])
 def health():
     try:
+        ensure_db_initialized()
         with get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute("SELECT 1")
@@ -155,6 +177,7 @@ def health():
 
 @app.route('/api/session/create', methods=['POST'])
 def create_session():
+    ensure_db_initialized()
     session_id = generate_session_id()
     short_id = generate_short_id()
 
@@ -165,6 +188,7 @@ def create_session():
 
 @app.route('/api/session/short/<short_id>', methods=['GET'])
 def get_session_by_short_id(short_id):
+    ensure_db_initialized()
     session_id = get_session_id_by_short(short_id)
     if not session_id:
         return jsonify({'error': 'Short ID not found'}), 404
@@ -177,6 +201,7 @@ def get_session_by_short_id(short_id):
 
 @app.route('/api/session/validate', methods=['POST'])
 def validate_session():
+    ensure_db_initialized()
     data = request.get_json()
     session_id = data.get('session_id') if data else None
     
@@ -194,6 +219,7 @@ def validate_session():
 
 @app.route('/api/session/<session_id>', methods=['GET'])
 def get_session(session_id):
+    ensure_db_initialized()
     if is_session_valid(session_id):
         touch_session(session_id)
         session = get_session_row(session_id)
@@ -207,6 +233,7 @@ def get_session(session_id):
 
 @app.route('/api/session/<session_id>/data', methods=['GET'])
 def get_session_data(session_id):
+    ensure_db_initialized()
     if not is_session_valid(session_id):
         return jsonify({'error': 'Session not found or expired'}), 404
     
@@ -216,6 +243,7 @@ def get_session_data(session_id):
 
 @app.route('/api/session/<session_id>/data', methods=['POST'])
 def save_session_data(session_id):
+    ensure_db_initialized()
     if not is_session_valid(session_id):
         return jsonify({'error': 'Session not found or expired'}), 404
     
@@ -228,6 +256,6 @@ def save_session_data(session_id):
 
 
 if __name__ == '__main__':
-    init_db()
+    ensure_db_initialized()
     app.run(host='0.0.0.0', port=5003, debug=False)
 
