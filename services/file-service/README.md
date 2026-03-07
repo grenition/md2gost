@@ -84,7 +84,14 @@ List all images for a session.
 
 The service is configured via environment variables:
 
-- `STORAGE_BASE`: Base directory for session storage (default: `/tmp/md2gost/sessions`)
+- `STORAGE_BACKEND`: `s3` (default) or `local`
+- `STORAGE_BASE`: Base directory for local storage (used only when `STORAGE_BACKEND=local`)
+- `S3_ENDPOINT`: S3 endpoint URL (for MinIO, e.g. `http://minio:9000`)
+- `S3_REGION`: S3 region
+- `S3_BUCKET`: Bucket name for uploaded images
+- `S3_ACCESS_KEY`: Access key for S3 API
+- `S3_SECRET_KEY`: Secret key for S3 API
+- `S3_USE_SSL`: `1` to enable SSL, `0` to disable
 
 ## Running Locally
 

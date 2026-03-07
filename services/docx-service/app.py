@@ -1,6 +1,7 @@
 import os
 import tempfile
 import io
+import requests
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import sys
@@ -18,6 +19,7 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 TEMPLATE_PATH = os.getenv('TEMPLATE_PATH', os.path.join(parent_dir, 'md2gost', 'Template.docx'))
 if not os.path.exists(TEMPLATE_PATH):
     TEMPLATE_PATH = os.path.join('/app', 'md2gost', 'Template.docx')
+FILE_SERVICE_URL = os.getenv('FILE_SERVICE_URL', 'http://file-service:5002')
 
 
 def docx_to_pdf(docx_path):
@@ -80,6 +82,39 @@ def docx_to_pdf(docx_path):
         raise Exception(f"PDF conversion error: {str(e)}")
 
 
+def download_session_images(session_id, working_dir):
+    if not session_id:
+        return
+
+    list_response = requests.get(
+        f'{FILE_SERVICE_URL}/api/session/{session_id}/images',
+        timeout=10
+    )
+    list_response.raise_for_status()
+    images = list_response.json().get('images', [])
+    if not images:
+        app.logger.info(f"No images found for session {session_id}")
+        return
+
+    copied_count = 0
+    for image in images:
+        filename = image.get('filename')
+        if not filename:
+            continue
+        image_url = image.get('url', f'/api/images/{session_id}/{filename}')
+        if image_url.startswith('/'):
+            image_url = f'{FILE_SERVICE_URL}{image_url}'
+        image_response = requests.get(image_url, timeout=30)
+        image_response.raise_for_status()
+
+        dst_path = os.path.join(working_dir, filename)
+        with open(dst_path, 'wb') as dst_file:
+            dst_file.write(image_response.content)
+        copied_count += 1
+
+    app.logger.info(f"Downloaded {copied_count} images for session {session_id}")
+
+
 @app.route('/health', methods=['GET'])
 def health():
     return jsonify({'status': 'healthy', 'service': 'docx-service'}), 200
@@ -113,25 +148,8 @@ def convert():
             else:
                 os.environ.pop('SYNTAX_HIGHLIGHTING', None)
             
-            # Copy images from session to working directory BEFORE conversion
-            if session_id:
-                session_images_dir = os.path.join('/tmp/md2gost/sessions', session_id, 'images')
-                app.logger.info(f"Looking for images in session: {session_id}, dir: {session_images_dir}, working_dir: {working_dir}")
-                if os.path.exists(session_images_dir):
-                    import shutil
-                    copied_count = 0
-                    for filename in os.listdir(session_images_dir):
-                        src_path = os.path.join(session_images_dir, filename)
-                        dst_path = os.path.join(working_dir, filename)
-                        if os.path.isfile(src_path):
-                            shutil.copy2(src_path, dst_path)
-                            copied_count += 1
-                            app.logger.info(f"Copied image: {filename} from {src_path} to {dst_path}")
-                    app.logger.info(f"Copied {copied_count} images to working directory: {working_dir}")
-                else:
-                    app.logger.warning(f"Session images directory not found: {session_images_dir}")
-            else:
-                app.logger.warning("No session_id provided, images will not be copied")
+            # Pull uploaded session images into converter working directory.
+            download_session_images(session_id, working_dir)
             
             converter = Converter(md_file_path, docx_file_path, TEMPLATE_PATH, debug=False)
             converter.convert()
@@ -198,25 +216,8 @@ def preview():
             else:
                 os.environ.pop('SYNTAX_HIGHLIGHTING', None)
             
-            # Copy images from session to working directory BEFORE conversion
-            if session_id:
-                session_images_dir = os.path.join('/tmp/md2gost/sessions', session_id, 'images')
-                app.logger.info(f"Looking for images in session: {session_id}, dir: {session_images_dir}, working_dir: {working_dir}")
-                if os.path.exists(session_images_dir):
-                    import shutil
-                    copied_count = 0
-                    for filename in os.listdir(session_images_dir):
-                        src_path = os.path.join(session_images_dir, filename)
-                        dst_path = os.path.join(working_dir, filename)
-                        if os.path.isfile(src_path):
-                            shutil.copy2(src_path, dst_path)
-                            copied_count += 1
-                            app.logger.info(f"Copied image: {filename} from {src_path} to {dst_path}")
-                    app.logger.info(f"Copied {copied_count} images to working directory: {working_dir}")
-                else:
-                    app.logger.warning(f"Session images directory not found: {session_images_dir}")
-            else:
-                app.logger.warning("No session_id provided, images will not be copied")
+            # Pull uploaded session images into converter working directory.
+            download_session_images(session_id, working_dir)
             
             converter = Converter(md_file_path, docx_file_path, TEMPLATE_PATH, debug=False)
             converter.convert()

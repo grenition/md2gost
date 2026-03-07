@@ -82,7 +82,12 @@ Get session information.
 
 ## Configuration
 
-Sessions expire after 24 hours of inactivity.
+Sessions are stored persistently in PostgreSQL and do not expire by default.
+
+Environment variables:
+
+- `SESSION_STORE_BACKEND`: `postgres` (default)
+- `DATABASE_URL`: PostgreSQL connection string
 
 ## Running Locally
 

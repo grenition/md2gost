@@ -4,15 +4,19 @@ A microservices-based web application for converting Markdown files to GOST-comp
 
 ## Architecture
 
-The application consists of four main services:
+The application consists of multiple services:
 
 - **Gateway (Nginx)**: API Gateway routing requests (Port 80)
 - **Frontend (React)**: Modern web interface for Markdown editing (Port 3000, internal)
-- **API Service (ASP.NET Core)**: Orchestration service handling business logic (Port 5001, internal)
+- **API Service (Python Flask)**: Orchestration service handling business logic (Port 5001, internal)
 - **DOCX Service (Python Flask)**: Core conversion service (Port 5000, internal)
+- **File Service (Python Flask)**: Image upload/retrieval (Port 5002, internal)
+- **Session Service (Python Flask)**: Session lifecycle and metadata (Port 5003, internal)
+- **PostgreSQL**: Persistent session storage
+- **S3-compatible storage (MinIO by default)**: Persistent image/object storage
 
 ```
-Browser → Nginx Gateway → React Frontend / ASP.NET API → Python DOCX Service
+Browser → Nginx Gateway → Frontend / API → (DOCX, File, Session) → (PostgreSQL, S3/MinIO)
 ```
 
 ## Quick Start
@@ -32,7 +36,7 @@ cd md2gost
 
 2. Start all services:
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
 
 3. Access the application:
@@ -153,12 +157,47 @@ md2gost/
 
 ### Environment Variables
 
-#### DOCX Service
-- `TEMPLATE_PATH` - Path to Template.docx (default: `/app/md2gost/Template.docx`)
-- `WORKING_DIR` - Working directory for temp files (default: `/tmp/md2gost`)
+Use `.env` file in the repository root. For production deployment:
 
-#### API Service
-- `DocxService__Url` - URL of DOCX service (default: `http://docx-service:5000`)
+1. Copy template:
+```bash
+cp .env.production.example .env
+```
+2. Fill required values (at minimum `DATABASE_URL` and `S3_*`).
+3. Start stack:
+```bash
+docker compose up -d --build
+```
+4. Check health:
+```bash
+curl http://<your-host>:${GATEWAY_PORT:-80}/api/health
+```
+
+Main variables:
+
+- `GATEWAY_PORT` - external HTTP port for Nginx (default: `80`)
+- `DOCX_SERVICE_URL` - URL for docx-service inside Docker network
+- `FILE_SERVICE_URL` - URL for file-service inside Docker network
+- `SESSION_SERVICE_URL` - URL for session-service inside Docker network
+- `SESSION_STORE_BACKEND` - session store backend: `postgres` (default)
+- `STORAGE_BACKEND` - file storage backend: `s3` or `local` (default: `s3`)
+- `DATABASE_URL` - PostgreSQL DSN (default in compose: `postgresql://md2gost:md2gost@postgres:5432/md2gost`)
+- `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` - used by bundled `postgres` container
+- `TEMPLATE_PATH` - path to DOCX template in `docx-service` (default: `/app/md2gost/Template.docx`)
+- `WORKING_DIR` - temporary conversion directory in `docx-service` (default: `/tmp/md2gost`)
+- `SESSIONS_STORAGE_BASE` - local fallback path used when `STORAGE_BACKEND=local`
+
+Infrastructure variables (passed to services via environment):
+
+- `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_USE_SSL`
+
+### Production Notes
+
+- `docker-compose.yml` no longer depends on local bind-mounts like `./setup.py:/app/setup.py:ro`, so it can run on VPS from a clean checkout.
+- Session state is persisted in PostgreSQL (no auto-expiration), and uploaded images are stored in S3-compatible object storage.
+- `docx-service` downloads session images through `file-service` API, so conversion does not require shared local volumes.
+- For first deployment run `docker compose up -d --build`.
+- For updates run `docker compose pull` (if using prebuilt images) or `docker compose up -d --build`.
 
 ## Troubleshooting
 
@@ -166,7 +205,7 @@ md2gost/
 
 1. Check Docker logs:
 ```bash
-docker-compose logs [service-name]
+docker compose logs [service-name]
 ```
 
 2. Verify ports are not in use:
@@ -176,14 +215,14 @@ lsof -i :80 -i :5000 -i :5001 -i :3000
 
 3. Rebuild services:
 ```bash
-docker-compose up --build --force-recreate
+docker compose up --build --force-recreate
 ```
 
 ### Preview not working
 
 1. Check DOCX service logs:
 ```bash
-docker-compose logs docx-service
+docker compose logs docx-service
 ```
 
 2. Verify DOCX service is accessible:
@@ -195,7 +234,7 @@ curl http://localhost:5000/health
 
 1. Check frontend build:
 ```bash
-docker-compose logs frontend
+docker compose logs frontend
 ```
 
 2. Verify gateway routing:

@@ -1,17 +1,122 @@
 import os
 import uuid
+from datetime import datetime
+
+import psycopg2
+from psycopg2.extras import RealDictCursor, Json
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from datetime import datetime, timedelta
 
 app = Flask(__name__)
 CORS(app)
 
-SESSIONS = {}
-SESSION_TIMEOUT = timedelta(hours=24)
-SESSION_DATA = {}
-SHORT_ID_TO_SESSION = {}
-SESSION_TO_SHORT_ID = {}
+DATABASE_URL = os.getenv(
+    'DATABASE_URL',
+    'postgresql://md2gost:md2gost@postgres:5432/md2gost'
+)
+
+
+def get_connection():
+    return psycopg2.connect(DATABASE_URL, connect_timeout=5)
+
+
+def init_db():
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS sessions (
+                    id TEXT PRIMARY KEY,
+                    short_id TEXT UNIQUE NOT NULL,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    last_activity TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    data JSONB NOT NULL DEFAULT '{}'::jsonb
+                )
+                """
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_sessions_short_id ON sessions(short_id)"
+            )
+
+
+def short_exists(short_id):
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT 1 FROM sessions WHERE short_id = %s", (short_id,))
+            return cursor.fetchone() is not None
+
+
+def create_session_record(session_id, short_id):
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO sessions (id, short_id, created_at, last_activity, data)
+                VALUES (%s, %s, NOW(), NOW(), '{}'::jsonb)
+                """,
+                (session_id, short_id),
+            )
+
+
+def is_session_valid(session_id):
+    if not session_id:
+        return False
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT 1 FROM sessions WHERE id = %s", (session_id,))
+            return cursor.fetchone() is not None
+
+
+def touch_session(session_id):
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "UPDATE sessions SET last_activity = NOW() WHERE id = %s",
+                (session_id,),
+            )
+
+
+def get_session_row(session_id):
+    with get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+            cursor.execute(
+                """
+                SELECT id, short_id, created_at, last_activity
+                FROM sessions
+                WHERE id = %s
+                """,
+                (session_id,),
+            )
+            return cursor.fetchone()
+
+
+def get_session_id_by_short(short_id):
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT id FROM sessions WHERE short_id = %s", (short_id,))
+            row = cursor.fetchone()
+            return row[0] if row else None
+
+
+def get_session_data_row(session_id):
+    with get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+            cursor.execute("SELECT data FROM sessions WHERE id = %s", (session_id,))
+            row = cursor.fetchone()
+            return row['data'] if row else {}
+
+
+def save_session_data_row(session_id, data):
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE sessions
+                SET data = %s, last_activity = NOW()
+                WHERE id = %s
+                """,
+                (Json(data), session_id),
+            )
 
 
 def generate_session_id():
@@ -24,65 +129,49 @@ def generate_short_id():
     chars = string.ascii_lowercase + string.digits
     while True:
         short_id = ''.join(random.choices(chars, k=8))
-        if short_id not in SHORT_ID_TO_SESSION:
+        if not short_exists(short_id):
             return short_id
-
-
-def is_session_valid(session_id):
-    if not session_id or session_id not in SESSIONS:
-        return False
-    
-    session = SESSIONS[session_id]
-    if datetime.now() - session['created_at'] > SESSION_TIMEOUT:
-        # Clean up expired session
-        del SESSIONS[session_id]
-        if session_id in SESSION_TO_SHORT_ID:
-            short_id = SESSION_TO_SHORT_ID[session_id]
-            del SESSION_TO_SHORT_ID[session_id]
-            if short_id in SHORT_ID_TO_SESSION:
-                del SHORT_ID_TO_SESSION[short_id]
-        if session_id in SESSION_DATA:
-            del SESSION_DATA[session_id]
-        return False
-    
-    return True
 
 
 @app.route('/health', methods=['GET'])
 def health():
-    return jsonify({'status': 'healthy', 'service': 'session-service'}), 200
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT 1")
+        return jsonify({
+            'status': 'healthy',
+            'service': 'session-service',
+            'store_backend': 'postgres'
+        }), 200
+    except Exception as exc:
+        return jsonify({
+            'status': 'unhealthy',
+            'service': 'session-service',
+            'store_backend': 'postgres',
+            'error': str(exc)
+        }), 500
 
 
 @app.route('/api/session/create', methods=['POST'])
 def create_session():
     session_id = generate_session_id()
     short_id = generate_short_id()
-    
-    SESSIONS[session_id] = {
-        'id': session_id,
-        'created_at': datetime.now(),
-        'last_activity': datetime.now()
-    }
-    SHORT_ID_TO_SESSION[short_id] = session_id
-    SESSION_TO_SHORT_ID[session_id] = short_id
-    
-    app.logger.info(f"Session created: {session_id}, short_id: {short_id}, total sessions: {len(SESSIONS)}")
+
+    create_session_record(session_id, short_id)
+    app.logger.info(f"Session created: {session_id}, short_id: {short_id}")
     return jsonify({'session_id': session_id, 'short_id': short_id}), 200
 
 
 @app.route('/api/session/short/<short_id>', methods=['GET'])
 def get_session_by_short_id(short_id):
-    if short_id not in SHORT_ID_TO_SESSION:
+    session_id = get_session_id_by_short(short_id)
+    if not session_id:
         return jsonify({'error': 'Short ID not found'}), 404
-    
-    session_id = SHORT_ID_TO_SESSION[short_id]
+
     if not is_session_valid(session_id):
-        # Clean up invalid mappings
-        del SHORT_ID_TO_SESSION[short_id]
-        if session_id in SESSION_TO_SHORT_ID:
-            del SESSION_TO_SHORT_ID[session_id]
-        return jsonify({'error': 'Session expired'}), 404
-    
+        return jsonify({'error': 'Session not found'}), 404
+
     return jsonify({'session_id': session_id, 'short_id': short_id}), 200
 
 
@@ -94,29 +183,26 @@ def validate_session():
     if not session_id:
         app.logger.warning("Session validation: no session_id provided")
         return jsonify({'valid': False, 'error': 'Session ID required'}), 400
-    
-    app.logger.info(f"Validating session: {session_id}, exists: {session_id in SESSIONS}, total sessions: {len(SESSIONS)}")
-    
+
     if is_session_valid(session_id):
-        SESSIONS[session_id]['last_activity'] = datetime.now()
-        app.logger.info(f"Session validated successfully: {session_id}")
+        touch_session(session_id)
         return jsonify({'valid': True}), 200
-    else:
-        app.logger.warning(f"Session validation failed: {session_id}")
-        return jsonify({'valid': False, 'error': 'Invalid or expired session'}), 200
+
+    app.logger.warning(f"Session validation failed: {session_id}")
+    return jsonify({'valid': False, 'error': 'Invalid or expired session'}), 200
 
 
 @app.route('/api/session/<session_id>', methods=['GET'])
 def get_session(session_id):
     if is_session_valid(session_id):
-        session = SESSIONS[session_id]
+        touch_session(session_id)
+        session = get_session_row(session_id)
         return jsonify({
             'session_id': session['id'],
             'created_at': session['created_at'].isoformat(),
             'last_activity': session['last_activity'].isoformat()
         }), 200
-    else:
-        return jsonify({'error': 'Session not found or expired'}), 404
+    return jsonify({'error': 'Session not found or expired'}), 404
 
 
 @app.route('/api/session/<session_id>/data', methods=['GET'])
@@ -124,7 +210,7 @@ def get_session_data(session_id):
     if not is_session_valid(session_id):
         return jsonify({'error': 'Session not found or expired'}), 404
     
-    data = SESSION_DATA.get(session_id, {})
+    data = get_session_data_row(session_id)
     return jsonify({'data': data}), 200
 
 
@@ -136,12 +222,12 @@ def save_session_data(session_id):
     data = request.get_json()
     if 'data' not in data:
         return jsonify({'error': 'Data field required'}), 400
-    
-    SESSION_DATA[session_id] = data['data']
-    SESSIONS[session_id]['last_activity'] = datetime.now()
+
+    save_session_data_row(session_id, data['data'])
     return jsonify({'success': True}), 200
 
 
 if __name__ == '__main__':
+    init_db()
     app.run(host='0.0.0.0', port=5003, debug=False)
 
